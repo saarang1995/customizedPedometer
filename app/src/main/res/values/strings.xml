@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">FitHeart</string>
+    <string name="steps_service_start">Start Service</string>
+    <string name="steps_service_stop">Stop Service</string>
+    <string name="steps_display">Steps will apprear shortly</string>
+
 </resources>
