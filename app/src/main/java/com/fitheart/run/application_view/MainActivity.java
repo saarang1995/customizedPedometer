@@ -22,6 +22,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+
     private Button startService, stopService;
     private TextView stepsCount;
     private SensorListener sensorListener;
@@ -29,29 +30,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final Handler mHandler = new Handler();
     private static final long PROGRESS_UPDATE_INTERNAL = 1000;
     private static final long PROGRESS_UPDATE_INITIAL_INTERVAL = 100;
-    private final Runnable mUpdateProgressTask = new Runnable() {
-        @Override
-        public void run() {
-            update_stepCounts();
-        }
-    };
-    private final ScheduledExecutorService mExecutorService =
-            Executors.newSingleThreadScheduledExecutor();
-
     private ScheduledFuture<?> mScheduleFuture;
 
-    private void scheduleSeekbarUpdate() {
-        if (!mExecutorService.isShutdown()) {
-            mScheduleFuture = mExecutorService.scheduleAtFixedRate(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            mHandler.post(mUpdateProgressTask);
-                        }
-                    }, PROGRESS_UPDATE_INITIAL_INTERVAL,
-                    PROGRESS_UPDATE_INTERNAL, TimeUnit.MILLISECONDS);
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +41,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Intent intent = new Intent(this, SensorListener.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
         startService(intent);
+    }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startStepCount();
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopStepCount();
     }
 
     @Override
@@ -70,11 +68,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBound = false;
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
 
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.start_service:
+                startStepCount();
+                break;
+            case R.id.stop_service:
+                stopStepCount();
+                break;
+        }
     }
+
 
     private void init() {
 
@@ -90,16 +96,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         stopService.setOnClickListener(this);
     }
 
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.start_service:
-                scheduleSeekbarUpdate();
-                break;
-            case R.id.stop_service:
-                unbindService(mConnection);
-                break;
-        }
+    private void stopStepCount() {
+        unbindService(mConnection);
+        mScheduleFuture.cancel(false);
     }
 
     private void update_stepCounts() {
@@ -129,4 +128,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     };
+
+    private void startStepCount() {
+        if (!mExecutorService.isShutdown()) {
+            mScheduleFuture = mExecutorService.scheduleAtFixedRate(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            mHandler.post(updateStepsCount);
+                        }
+                    }, PROGRESS_UPDATE_INITIAL_INTERVAL,
+                    PROGRESS_UPDATE_INTERNAL, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private final Runnable updateStepsCount = new Runnable() {
+        @Override
+        public void run() {
+            update_stepCounts();
+        }
+    };
+    private final ScheduledExecutorService mExecutorService =
+            Executors.newSingleThreadScheduledExecutor();
+
+
 }
